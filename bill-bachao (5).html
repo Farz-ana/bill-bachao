@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bill Bachao - AI Electricity Bill Reader & Saver</title>
+<style>
+  :root{
+    --bg:#0f172a;
+    --card:#ffffff;
+    --primary:#0f6e56;
+    --primary-dark:#085041;
+    --accent:#d85a30;
+    --warn:#854f0b;
+    --warn-bg:#faeeda;
+    --danger:#a32d2d;
+    --danger-bg:#fcebeb;
+    --success:#3b6d11;
+    --success-bg:#eaf3de;
+    --text:#1f2430;
+    --muted:#6b7280;
+    --border:#e5e7eb;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Segoe UI', system-ui, -apple-system, Arial, sans-serif;
+    background:linear-gradient(135deg,#0f6e56 0%, #085041 45%, #042c2c 100%);
+    min-height:100vh;
+    color:var(--text);
+    padding:24px 16px 60px;
+  }
+  .wrap{max-width:880px;margin:0 auto;}
+  header{
+    text-align:center;
+    color:#fff;
+    margin-bottom:28px;
+  }
+  header .logo{
+    font-size:42px;
+    line-height:1;
+    margin-bottom:6px;
+  }
+  header h1{
+    font-size:28px;
+    margin:0 0 6px;
+    font-weight:700;
+    letter-spacing:0.5px;
+  }
+  header p{
+    margin:0;
+    opacity:0.85;
+    font-size:14.5px;
+  }
+  .card{
+    background:var(--card);
+    border-radius:16px;
+    padding:24px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.18);
+    margin-bottom:20px;
+  }
+  .card h2{
+    margin:0 0 16px;
+    font-size:18px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .step-badge{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:24px;height:24px;
+    background:var(--primary);
+    color:#fff;
+    border-radius:50%;
+    font-size:13px;
+    font-weight:700;
+    flex-shrink:0;
+  }
+  .grid2{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
+  }
+  @media(max-width:600px){.grid2{grid-template-columns:1fr;}}
+  label{
+    display:block;
+    font-size:13px;
+    color:var(--muted);
+    margin-bottom:5px;
+    font-weight:600;
+  }
+  input[type=text], input[type=number], select, textarea{
+    width:100%;
+    padding:10px 12px;
+    border:1.5px solid var(--border);
+    border-radius:10px;
+    font-size:14.5px;
+    background:#fafafa;
+    transition:border-color .15s;
+  }
+  input:focus, select:focus, textarea:focus{
+    outline:none;
+    border-color:var(--primary);
+    background:#fff;
+  }
+  .field{margin-bottom:14px;}
+  .upload-zone{
+    border:2px dashed #cbd5c0;
+    border-radius:14px;
+    padding:28px 16px;
+    text-align:center;
+    cursor:pointer;
+    background:#f8faf7;
+    transition:.15s;
+  }
+  .upload-zone:hover{border-color:var(--primary); background:#f0f7ed;}
+  .upload-zone .icon{font-size:34px;margin-bottom:8px;}
+  .upload-zone p{margin:4px 0;color:var(--muted);font-size:13.5px;}
+  .upload-zone strong{color:var(--primary-dark);}
+  #fileInput{display:none;}
+  #previewWrap{margin-top:14px;text-align:center;display:none;}
+  #previewWrap img{max-width:100%;max-height:260px;border-radius:10px;border:1px solid var(--border);}
+  .btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    background:var(--primary);
+    color:#fff;
+    border:none;
+    padding:13px 22px;
+    border-radius:10px;
+    font-size:15px;
+    font-weight:600;
+    cursor:pointer;
+    transition:.15s;
+    width:100%;
+  }
+  .btn:hover{background:var(--primary-dark);}
+  .btn:disabled{background:#9ca3af;cursor:not-allowed;}
+  .btn-secondary{
+    background:transparent;
+    color:var(--primary-dark);
+    border:1.5px solid var(--primary);
+  }
+  .btn-secondary:hover{background:#eef6ec;}
+  .tabs{
+    display:flex;
+    gap:8px;
+    margin-bottom:18px;
+    border-bottom:1.5px solid var(--border);
+  }
+  .tab{
+    padding:10px 16px;
+    cursor:pointer;
+    font-size:14px;
+    font-weight:600;
+    color:var(--muted);
+    border-bottom:3px solid transparent;
+  }
+  .tab.active{color:var(--primary-dark); border-bottom-color:var(--primary);}
+  .hidden{display:none !important;}
+  .loader{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    padding:20px;
+    color:var(--muted);
+    font-size:14px;
+  }
+  .spinner{
+    width:18px;height:18px;
+    border:3px solid #e5e7eb;
+    border-top-color:var(--primary);
+    border-radius:50%;
+    animation:spin 0.8s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .results{display:none;}
+  .metric-row{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:12px;
+    margin-bottom:18px;
+  }
+  @media(max-width:600px){.metric-row{grid-template-columns:1fr 1fr;}}
+  .metric{
+    background:#f6f8f5;
+    border-radius:12px;
+    padding:14px;
+    text-align:center;
+  }
+  .metric .val{font-size:22px;font-weight:700;color:var(--primary-dark);}
+  .metric .lbl{font-size:12px;color:var(--muted);margin-top:2px;}
+  .alert-box{
+    border-radius:12px;
+    padding:14px 16px;
+    margin-bottom:16px;
+    font-size:14px;
+    line-height:1.5;
+    display:flex;
+    gap:10px;
+  }
+  .alert-danger{background:var(--danger-bg); color:var(--danger);}
+  .alert-warn{background:var(--warn-bg); color:var(--warn);}
+  .alert-success{background:var(--success-bg); color:var(--success);}
+  .alert-box .ic{font-size:18px;flex-shrink:0;}
+  .section-title{
+    font-size:15px;
+    font-weight:700;
+    margin:20px 0 10px;
+    color:var(--text);
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .tip{
+    background:#fafbf9;
+    border:1px solid var(--border);
+    border-left:4px solid var(--primary);
+    border-radius:8px;
+    padding:12px 14px;
+    margin-bottom:10px;
+    font-size:14px;
+    line-height:1.5;
+  }
+  .tip b{color:var(--primary-dark);}
+  .chat-row{display:flex;gap:8px;margin-top:14px;}
+  .chat-row input{flex:1;}
+  .chat-reply{
+    background:#f6f8f5;
+    border-radius:10px;
+    padding:14px;
+    margin-top:12px;
+    font-size:14px;
+    line-height:1.6;
+    white-space:pre-wrap;
+  }
+  footer{
+    text-align:center;
+    color:rgba(255,255,255,0.6);
+    font-size:12.5px;
+    margin-top:30px;
+  }
+  .error-msg{
+    background:var(--danger-bg);
+    color:var(--danger);
+    padding:12px 14px;
+    border-radius:10px;
+    font-size:13.5px;
+    margin-top:10px;
+  }
+  .raw-toggle{
+    font-size:12.5px;
+    color:var(--muted);
+    cursor:pointer;
+    text-decoration:underline;
+    margin-top:6px;
+    display:inline-block;
+  }
+  .appliance-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:8px;
+    margin-top:6px;
+  }
+  @media(max-width:600px){.appliance-grid{grid-template-columns:1fr 1fr;}}
+  .chk{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-size:13px;
+    font-weight:500;
+    color:var(--text);
+    background:#f6f8f5;
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:8px 10px;
+    cursor:pointer;
+    margin-bottom:0;
+  }
+  .chk input{width:auto;margin:0;}
+  .chk:has(input:checked){border-color:var(--primary); background:#eef6ec;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="logo">⚡</div>
+    <h1>Bill Bachao</h1>
+    <p>Snap your electricity bill. Know where your money goes. Save on the next one.</p>
+  </header>
+
+  <div class="card">
+    <h2><span class="step-badge">1</span> Add your current bill</h2>
+    <div class="tabs">
+      <div class="tab active" id="tabUpload">Upload / Photograph</div>
+      <div class="tab" id="tabManual">Enter manually</div>
+    </div>
+
+    <div id="panelUpload">
+      <div class="upload-zone" id="dropZone">
+        <div class="icon">📷</div>
+        <p><strong>Click to upload</strong> a photo or screenshot of your bill</p>
+        <p>JPG, PNG — works with most discom bill formats</p>
+      </div>
+      <input type="file" id="fileInput" accept="image/*">
+      <div id="previewWrap">
+        <img id="previewImg" alt="Bill preview">
+      </div>
+    </div>
+
+    <div id="panelManual" class="hidden">
+      <div class="grid2">
+        <div class="field">
+          <label>Units consumed this month (kWh)</label>
+          <input type="number" id="manUnits" placeholder="e.g. 280">
+        </div>
+        <div class="field">
+          <label>Amount billed (₹)</label>
+          <input type="number" id="manAmount" placeholder="e.g. 2100">
+        </div>
+        <div class="field">
+          <label>Units consumed last month (kWh) — optional</label>
+          <input type="number" id="manPrevUnits" placeholder="e.g. 200">
+        </div>
+        <div class="field">
+          <label>Billing period</label>
+          <input type="text" id="manPeriod" placeholder="e.g. May 2026">
+        </div>
+      </div>
+    </div>
+
+    <div class="field" style="margin-top:6px;">
+      <label>Household details (required — used to build an accurate breakdown)</label>
+      <div class="grid2">
+        <div class="field">
+          <label>Number of members</label>
+          <input type="number" id="hMembers" placeholder="e.g. 4" min="1">
+        </div>
+        <div class="field">
+          <label>City / region</label>
+          <input type="text" id="hCity" placeholder="e.g. Chennai">
+        </div>
+      </div>
+      <label style="margin-top:6px;">Tick every appliance you actually own (unticked = not present, and will never be blamed for a spike)</label>
+      <div class="appliance-grid" id="applianceGrid">
+        <label class="chk"><input type="checkbox" value="AC" class="appCheck"> AC</label>
+        <label class="chk"><input type="checkbox" value="Heater/Geyser" class="appCheck"> Heater / Geyser</label>
+        <label class="chk"><input type="checkbox" value="Refrigerator" class="appCheck" checked> Refrigerator</label>
+        <label class="chk"><input type="checkbox" value="Washing Machine" class="appCheck"> Washing machine</label>
+        <label class="chk"><input type="checkbox" value="Water Pump/Motor" class="appCheck"> Water pump / motor</label>
+        <label class="chk"><input type="checkbox" value="Ceiling Fans" class="appCheck" checked> Fans</label>
+        <label class="chk"><input type="checkbox" value="TV" class="appCheck" checked> TV</label>
+        <label class="chk"><input type="checkbox" value="Lighting" class="appCheck" checked> Lighting (bulbs/tubes)</label>
+        <label class="chk"><input type="checkbox" value="Microwave/Oven" class="appCheck"> Microwave / oven</label>
+        <label class="chk"><input type="checkbox" value="Iron" class="appCheck"> Iron</label>
+        <label class="chk"><input type="checkbox" value="Mixer/Grinder" class="appCheck"> Mixer / grinder</label>
+        <label class="chk"><input type="checkbox" value="Computer/Router" class="appCheck"> Computer / router / WFH setup</label>
+      </div>
+      <div class="field" style="margin-top:10px;">
+        <label>Anything else not listed above (optional)</label>
+        <input type="text" id="hOther" placeholder="e.g. aquarium pump, inverter, EV charger">
+      </div>
+    </div>
+
+    <button class="btn" id="analyzeBtn">🔍 Analyze my bill</button>
+    <div id="errorBox"></div>
+  </div>
+
+  <div class="card hidden" id="loaderCard">
+    <div class="loader"><div class="spinner"></div> Reading your bill and crunching the numbers...</div>
+  </div>
+
+  <div class="card results" id="resultsCard">
+    <h2><span class="step-badge">2</span> Your bill, decoded</h2>
+    <div class="metric-row" id="metricRow"></div>
+    <div id="anomalyBox"></div>
+    <div class="section-title">📊 Where your money is going</div>
+    <div id="breakdownBox"></div>
+    <div class="section-title">💡 Your personalized saving plan</div>
+    <div id="tipsBox"></div>
+    <span class="raw-toggle" id="rawToggle">View raw AI analysis</span>
+    <div id="rawBox" class="hidden chat-reply"></div>
+  </div>
+
+  <div class="card results" id="chatCard">
+    <h2><span class="step-badge">3</span> Ask follow-up questions</h2>
+    <p style="color:var(--muted);font-size:13.5px;margin-top:-6px;">e.g. "Why did my bill increase?" or "What if I reduce AC usage by 2 hours?"</p>
+    <div class="chat-row">
+      <input type="text" id="chatInput" placeholder="Ask anything about your bill...">
+      <button class="btn" id="chatBtn" style="width:auto;padding:11px 20px;">Ask</button>
+    </div>
+    <div id="chatReply"></div>
+  </div>
+
+  <footer>Bill Bachao — built for the 1M1B AI for Sustainability Internship · SDG 7: Affordable & Clean Energy<br>Powered by Claude (Anthropic) · Your bill data is processed in this session only and never stored.</footer>
+</div>
+
+<script>
+let billImageBase64 = null;
+let billImageMediaType = null;
+let lastAnalysis = null;
+
+const tabUpload = document.getElementById('tabUpload');
+const tabManual = document.getElementById('tabManual');
+const panelUpload = document.getElementById('panelUpload');
+const panelManual = document.getElementById('panelManual');
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const previewWrap = document.getElementById('previewWrap');
+const previewImg = document.getElementById('previewImg');
+const analyzeBtn = document.getElementById('analyzeBtn');
+const errorBox = document.getElementById('errorBox');
+const loaderCard = document.getElementById('loaderCard');
+const resultsCard = document.getElementById('resultsCard');
+const chatCard = document.getElementById('chatCard');
+
+tabUpload.onclick = () => {
+  tabUpload.classList.add('active'); tabManual.classList.remove('active');
+  panelUpload.classList.remove('hidden'); panelManual.classList.add('hidden');
+};
+tabManual.onclick = () => {
+  tabManual.classList.add('active'); tabUpload.classList.remove('active');
+  panelManual.classList.remove('hidden'); panelUpload.classList.add('hidden');
+};
+
+dropZone.onclick = () => fileInput.click();
+fileInput.onchange = (e) => {
+  const file = e.target.files[0];
+  if(!file) return;
+  billImageMediaType = file.type;
+  const reader = new FileReader();
+  reader.onload = () => {
+    billImageBase64 = reader.result.split(',')[1];
+    previewImg.src = reader.result;
+    previewWrap.style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+};
+
+function escapeHtml(s){
+  const d = document.createElement('div');
+  d.innerText = s;
+  return d.innerHTML;
+}
+
+function setLoading(isLoading){
+  loaderCard.classList.toggle('hidden', !isLoading);
+  analyzeBtn.disabled = isLoading;
+  analyzeBtn.textContent = isLoading ? 'Analyzing...' : '🔍 Analyze my bill';
+}
+
+async function callClaude(messages, system){
+  const body = {
+    model: "claude-sonnet-4-6",
+    max_tokens: 1500,
+    messages: messages
+  };
+  if(system) body.system = system;
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  if(!res.ok){
+    const t = await res.text();
+    throw new Error("API error " + res.status + ": " + t.slice(0,200));
+  }
+  const data = await res.json();
+  const textParts = data.content.filter(b => b.type === "text").map(b => b.text);
+  return textParts.join("\n");
+}
+
+function buildSystemPrompt(){
+  return `You are an expert Indian electricity-bill analyst for a tool called "Bill Bachao".
+Given bill information (either an uploaded bill image, or manually entered units/amount, plus a mandatory structured list of appliances the household actually owns, and optional previous month's units), you must treat the appliance list as ground truth — it is not a guess, the user explicitly ticked it. Never assume an appliance exists if it is not in that list, and never assume one is absent if it IS in the list.
+
+1. Extract or estimate: units consumed (kWh), amount billed (₹), billing period, and tariff slab if visible/inferable.
+2. Estimate a rough appliance-level breakdown of consumption STRICTLY based on appliances the household details actually mention or that are safe to assume exist in nearly every Indian home (lighting, fans, fridge, mobile/TV charging, misc small loads). Do NOT include AC, heater, geyser, washing machine, or any other appliance unless it is explicitly mentioned in the household details or visible on the bill. If household details are sparse, keep the breakdown to generic categories: lighting, fan, fridge, misc/standby, and say so in "summary".
+3. Detect anomalies: compare to the previous month's units if given, or to a typical household of that size and appliance list, and flag any unusual jump (e.g. >25% increase) with a likely cause and severity (normal / mild / high). If the household has no AC/heater/geyser, do not attribute a spike to those appliances — instead consider fridge compressor load in hot weather, increased occupancy/work-from-home days, lighting duration, motor/pump usage, appliance malfunction, meter/billing errors, or a tariff slab change. A small rise (under ~15%) with no major seasonal appliance present should usually be marked "normal", not flagged as an anomaly.
+4. Give exactly 3 personalized, specific, actionable saving tips ranked by potential ₹ savings — not generic advice like "turn off lights". Tips must only reference appliances/habits the household actually mentioned (or universally-present ones like lighting, fans, fridge). Never suggest reducing AC, heater, or geyser usage for a household that didn't mention owning one. Each tip should give a rough estimated monthly saving in ₹.
+
+Respond ONLY with valid JSON, no markdown fences, no preamble, in this exact structure:
+{
+  "units_kwh": number,
+  "amount_rs": number,
+  "billing_period": string,
+  "cost_per_unit": number,
+  "anomaly": {
+    "severity": "normal" | "mild" | "high",
+    "message": string
+  },
+  "breakdown": [
+    {"category": string, "percent": number, "rupees": number}
+  ],
+  "tips": [
+    {"title": string, "detail": string, "estimated_monthly_saving_rs": number}
+  ],
+  "summary": string
+}
+The breakdown percentages should sum to approximately 100. If units or amount cannot be determined from an image, make a clearly labeled best estimate and say so in "summary". Keep the tone friendly, simple, and very specific to Indian households (₹, kWh, AC/fridge/geyser/fan terminology).`;
+}
+
+analyzeBtn.onclick = async () => {
+  errorBox.innerHTML = '';
+  const usingUpload = tabUpload.classList.contains('active');
+
+  const members = document.getElementById('hMembers').value.trim();
+  const city = document.getElementById('hCity').value.trim();
+  const otherAppliances = document.getElementById('hOther').value.trim();
+  const checkedAppliances = Array.from(document.querySelectorAll('.appCheck:checked')).map(c => c.value);
+
+  if(!members || !city){
+    errorBox.innerHTML = '<div class="error-msg">Please enter number of members and city — these are required for an accurate breakdown.</div>';
+    return;
+  }
+
+  const applianceList = checkedAppliances.length ? checkedAppliances.join(', ') : 'none of the listed appliances';
+  const household = `${members} members, located in ${city}. Appliances present: ${applianceList}${otherAppliances ? ', plus: ' + otherAppliances : ''}. Treat any appliance NOT in this list as absent — do not assume the household owns it.`;
+
+  let userContent = [];
+  let promptText = `Household details: ${household}\n`;
+
+  if(usingUpload){
+    if(!billImageBase64){
+      errorBox.innerHTML = '<div class="error-msg">Please upload a photo of your bill first, or switch to manual entry.</div>';
+      return;
+    }
+    promptText += "Please read the attached electricity bill image and analyze it as instructed.";
+    userContent.push({ type: "image", source: { type: "base64", media_type: billImageMediaType, data: billImageBase64 } });
+    userContent.push({ type: "text", text: promptText });
+  } else {
+    const units = document.getElementById('manUnits').value;
+    const amount = document.getElementById('manAmount').value;
+    const prevUnits = document.getElementById('manPrevUnits').value;
+    const period = document.getElementById('manPeriod').value;
+    if(!units || !amount){
+      errorBox.innerHTML = '<div class="error-msg">Please enter at least units consumed and amount billed.</div>';
+      return;
+    }
+    promptText += `Current month units: ${units} kWh. Amount billed: ₹${amount}. Billing period: ${period || "not specified"}. Previous month units: ${prevUnits || "not provided"}.\nAnalyze as instructed.`;
+    userContent.push({ type: "text", text: promptText });
+  }
+
+  setLoading(true);
+  resultsCard.classList.remove('results');
+  resultsCard.style.display = 'none';
+  chatCard.style.display = 'none';
+
+  try{
+    const raw = await callClaude([{ role: "user", content: userContent }], buildSystemPrompt());
+    const cleaned = raw.replace(/```json|```/g, '').trim();
+    const data = JSON.parse(cleaned);
+    lastAnalysis = data;
+    renderResults(data);
+    resultsCard.style.display = 'block';
+    chatCard.style.display = 'block';
+  } catch(err){
+    errorBox.innerHTML = `<div class="error-msg">Something went wrong: ${escapeHtml(err.message)}. Try again, or switch to manual entry if you uploaded an image.</div>`;
+  } finally {
+    setLoading(false);
+  }
+};
+
+function fmtRs(n){
+  if(typeof n !== 'number') return n;
+  return '₹' + Math.round(n).toLocaleString('en-IN');
+}
+
+function renderResults(data){
+  const metricRow = document.getElementById('metricRow');
+  metricRow.innerHTML = `
+    <div class="metric"><div class="val">${data.units_kwh ?? '-'}</div><div class="lbl">Units (kWh)</div></div>
+    <div class="metric"><div class="val">${fmtRs(data.amount_rs)}</div><div class="lbl">Amount billed</div></div>
+    <div class="metric"><div class="val">${data.cost_per_unit ? '₹' + data.cost_per_unit.toFixed(2) : '-'}</div><div class="lbl">Cost / unit</div></div>
+  `;
+
+  const anomalyBox = document.getElementById('anomalyBox');
+  const sev = data.anomaly?.severity || 'normal';
+  let cls = 'alert-success', icon = '✅';
+  if(sev === 'mild'){ cls = 'alert-warn'; icon = '⚠️'; }
+  if(sev === 'high'){ cls = 'alert-danger'; icon = '🚨'; }
+  anomalyBox.innerHTML = `<div class="alert-box ${cls}"><span class="ic">${icon}</span><span>${escapeHtml(data.anomaly?.message || data.summary || '')}</span></div>`;
+
+  const breakdownBox = document.getElementById('breakdownBox');
+  breakdownBox.innerHTML = (data.breakdown || []).map(b => `
+    <div style="margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;font-size:13.5px;margin-bottom:4px;">
+        <span style="font-weight:600;">${escapeHtml(b.category)}</span>
+        <span style="color:var(--muted);">${b.percent}% · ${fmtRs(b.rupees)}</span>
+      </div>
+      <div style="background:#eef0ec;border-radius:6px;height:8px;overflow:hidden;">
+        <div style="background:var(--primary);height:100%;width:${Math.min(b.percent,100)}%;"></div>
+      </div>
+    </div>
+  `).join('');
+
+  const tipsBox = document.getElementById('tipsBox');
+  tipsBox.innerHTML = (data.tips || []).map((t,i) => `
+    <div class="tip">
+      <b>${i+1}. ${escapeHtml(t.title)}</b> — saves roughly ${fmtRs(t.estimated_monthly_saving_rs)}/month<br>
+      ${escapeHtml(t.detail)}
+    </div>
+  `).join('');
+
+  document.getElementById('rawBox').textContent = JSON.stringify(data, null, 2);
+}
+
+document.getElementById('rawToggle').onclick = () => {
+  document.getElementById('rawBox').classList.toggle('hidden');
+};
+
+document.getElementById('chatBtn').onclick = async () => {
+  const q = document.getElementById('chatInput').value.trim();
+  if(!q || !lastAnalysis) return;
+  const replyBox = document.getElementById('chatReply');
+  replyBox.innerHTML = '<div class="loader"><div class="spinner"></div> Thinking...</div>';
+  try{
+    const sys = `You are Bill Bachao's assistant. The user already received this bill analysis: ${JSON.stringify(lastAnalysis)}. Answer their follow-up question directly, concisely (under 120 words), in plain friendly language with ₹ figures where relevant. No markdown headers.`;
+    const answer = await callClaude([{ role: "user", content: q }], sys);
+    replyBox.innerHTML = `<div class="chat-reply">${escapeHtml(answer)}</div>`;
+  } catch(err){
+    replyBox.innerHTML = `<div class="error-msg">${escapeHtml(err.message)}</div>`;
+  }
+};
+</script>
+</body>
+</html>
